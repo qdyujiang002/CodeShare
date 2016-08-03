@@ -8,6 +8,20 @@
 
 #import "NetWorkTool.h"
 #import <AFNetworking.h>
+
+#ifdef DEBUG   //DEBUG 是程序自带的默认存在的一个宏定义，我们平时运行都是在这种方式下
+
+//平时我们开发时候，都会用一个单独的测试环境
+static NSString* baseUrl = @"http://10.30.152.134/PhalApi/Public/CodeShare/";
+//接口列表地址
+//http://10.30.152.134/PhalApi/Public/CodeShare/listAllApis.php
+
+#else
+
+static NSString* baseUrl = @"https://www.1000phone.tk";
+
+#endif
+
 @implementation NetWorkTool
 
 //为了防止我们的应用频繁的获取网络数据的时候，创建的sessionManager过多,会大量消耗手机资源，我们最好将封装为一个单例,获取网络数据只用到这一个对象.
@@ -15,7 +29,7 @@
     static AFHTTPSessionManager* manager = nil;
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
-        manager = [[AFHTTPSessionManager alloc]initWithBaseURL:[NSURL URLWithString:@"https://www.1000phone.tk"]];
+        manager = [[AFHTTPSessionManager alloc]initWithBaseURL:[NSURL URLWithString:baseUrl]];
         //设置请求的超时时间
         //设置请求的参数编码方式
         manager.requestSerializer.timeoutInterval = 30;
