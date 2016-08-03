@@ -11,6 +11,9 @@
 //这个里面封装了一个方法，可以通过一个颜色，生成一张纯色的图片
 #import "UIImage+Color.h"
 #import "UIButton+BackgroundColor.h"
+#import "UIControl+ActionBlocks.h"
+#import "CSForgetViewController.h"
+#import "CSRegisterViewController.h"
 
 @interface CSLoginViewController ()
 
@@ -152,10 +155,38 @@
      */
     //让登录按钮的宽度和左边距保持跟父空间相对位置不变
     loginButton.autoresizingMask = UIViewAutoresizingFlexibleWidth|UIViewAutoresizingFlexibleLeftMargin;
+    [forgetPass setTitleColor:[UIColor grayColor] forState:UIControlStateNormal];
+    
+//    [forgetPass addTarget:self action:@selector(goToForget) forControlEvents:UIControlEventTouchUpInside];
+    //我们可以将按钮的事件与按钮的事件写到一块
+    //1.
+    [forgetPass handleControlEvents:UIControlEventTouchUpInside withBlock:^(id weakSender) {
+      //把按钮的事件回调，写到block里，便于我们在写界面的时候方便的加入控制事件
+        CSForgetViewController* forgetVC = [[CSForgetViewController alloc]init];
+        [self.navigationController pushViewController:forgetVC animated:YES];
+    }];
+    
+    //这里就用系统自带的 barButtonItem
+    self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc]initWithTitle:@"注册" style:UIBarButtonItemStylePlain target:self action:@selector(gotoRegister)];
+    
+    
     
     
     
 }
+
+
+-(void)gotoRegister{
+
+    CSRegisterViewController* registerVC = [[CSRegisterViewController alloc]init];
+    [self.navigationController pushViewController:registerVC animated:YES];
+    
+}
+
+
+
+
+
 
 
 - (void)didReceiveMemoryWarning {

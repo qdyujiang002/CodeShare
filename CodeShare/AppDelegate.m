@@ -8,6 +8,7 @@
 
 #import "AppDelegate.h"
 #import "CSViewController.h"
+#import <SMSSDK/SMS_SDK/SMSSDK.h>
 @interface AppDelegate ()
 
 @end
@@ -19,10 +20,29 @@
     //一般情况下为了防止appdelegate方法里面需要添加的东西过多显得程序混乱，我们都会将不同的模块封装起来
     [self setUpRootViewController];
     
+    //Mob 初始化
+    [self setUpMob];
+    
+    
     
     
     return YES;
 }
+
+
+
+-(void)setUpMob{
+
+    [SMSSDK registerApp:MobApp withSecret:MobSecret];
+    
+    
+}
+
+
+
+
+
+
 
 -(void)setUpRootViewController{
 
@@ -30,6 +50,9 @@
     self.window = [[UIWindow alloc]initWithFrame:[UIScreen mainScreen].bounds];
     self.window.rootViewController = [[CSViewController alloc]init];
     [self.window makeKeyAndVisible];
+    
+    
+    
     
 }
 
