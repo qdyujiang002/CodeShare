@@ -12,7 +12,15 @@
 #import "UIControl+ActionBlocks.h"
 #import <ReactiveCocoa/ReactiveCocoa.h>
 #import <SMSSDK/SMS_SDK/SMSSDK.h>
+#import "NSTimer+Blocks.h"
+#import "NSTimer+Addition.h"
+#import "NSString+MD5.h"
+#import "UIAlertView+Block.h"
 @interface CSRegisterViewController ()
+
+//写成属性可以方便的监控变化
+@property(nonatomic,strong)NSNumber* waitTime;
+@property(nonatomic,strong)NSTimer * timer;
 
 @end
 
@@ -168,7 +176,7 @@
     
        //登录按钮
     UIButton* loginButton = [UIButton buttonWithType:UIButtonTypeCustom];
-    [loginButton setTitle:@"登录" forState:UIControlStateNormal];
+    [loginButton setTitle:@"注册" forState:UIControlStateNormal];
     [loginButton titleLabel].font = [UIFont systemFontOfSize:15];
     [loginButton setFrame:CGRectMake(0, 550, self.view.bounds.size.width, 64)];
     [self.view addSubview:loginButton];
@@ -192,7 +200,7 @@
     phonetext.keyboardType = UIKeyboardTypeNumberPad;
     
     
-    //ReactiveCocaa 处理
+    //ReactiveCocoa 处理
     //Reactive 可以代替delegate\target action\通知\kvo\.....一系列 iOS开发里面的数据传递方式
     //RAC使用的是信号流的方式来处理我们的数据，无论是按钮点击事件，还是输入框事件，还是网络数据获取.........都可以被当作"信号"来看待.
     //我们可以观测某个信号的改变，来做相应的操作
@@ -209,13 +217,16 @@
         }
     }];
     
+    //我们给等待时间赋初始值
+    self.waitTime = @-1;
     //获取验证码按钮默认不可点
     rightButton.enabled = NO;
     //我们可以直接将某个信号处理的返回结果，设置为某个对象的属性值
     //RAC(rightButton,enabled) = [RACSignal combineLatest: reduce:];
     //combineLatest 一堆信号的集合
-    RAC(rightButton,enabled) = [RACSignal combineLatest:@[phonetext.rac_textSignal] reduce:^(NSString* phone){
-        return @(phone.length >= 11);
+    RAC(rightButton,enabled) = [RACSignal combineLatest:@[phonetext.rac_textSignal,RACObserve(self, waitTime)] reduce:^(NSString* phone, NSNumber* waitTime1){
+      
+        return @(phone.length >= 11 && waitTime1.integerValue<=0);
     }];
     
     
@@ -225,22 +236,92 @@
         return @(phone.length>=11 && pass.length>=6 && testT.length == 4);
     }];
     
+    
+    //如果在实际开发环境中，我们在做发送验证码的功能时，都会有一个等待时间
+    //1.为了节省成本
+    //一般开发中用第三方短信提供商，做发送验证码功能，一条/6-8分钱,所以成本还是挺高的.
+    //2.为了用户体验
        [rightButton handleControlEvents:UIControlEventTouchUpInside withBlock:^(id weakSender) {
+           //直接进入读秒
+           self.waitTime = @60;
            //发送验证码
            [SMSSDK getVerificationCodeByMethod:SMSGetCodeMethodSMS phoneNumber:phonetext.text zone:@"86" customIdentifier:nil result:^(NSError *error) {
                if (error) {
+                   //如果失败，让等待时间变为-1
+                   self.waitTime = @-1;
                    
                }else{
                    NSLog(@"获取验证码成功");
-                   
+                   self.timer = [NSTimer scheduledTimerWithTimeInterval:1.0 block:^{
+                      
+                           self.waitTime = [NSNumber numberWithInteger:self.waitTime.integerValue - 1];
+                       
+                       
+                       
+                   } repeats:YES];
                }
                
                
            }];
 
-    } ];
+    }];
+    
+    //用RAC监控数据的变化，显示响应的界面
+    [RACObserve(self, waitTime)  subscribeNext:^(NSNumber* waitTime2) {
+        
+        if (waitTime2.integerValue <= 0) {
+            //将定时器去除的操作写到这里也可以
+            [self.timer invalidate];
+            self.timer = nil;
+            [rightButton setTitle:@"获取验证码" forState:UIControlStateNormal];
+        }else if(waitTime2.integerValue > 0){
+            [rightButton setTitle:[NSString stringWithFormat:@"等待%@秒",waitTime2] forState:UIControlStateNormal];
+            
+        }
+    }];
+    
+    [[loginButton rac_signalForControlEvents:UIControlEventTouchUpInside] subscribeNext:^(id x) {
+        //一般我们的密码不可能明文传输，最简单的也要进行md5加密
+        //一旦进行md5加密，会破坏字符串原来携带的信息
+        //但是，对于密码来说，服务器和app交互并不需要知道密码所携带的信息，所以无论是登录还是注册，我们都必须加密(服务器也不知道你的密码是多少)
+        //MD5 加密算法是死的,所以别人可以通过暴力破解的方式来获取你的密码
+        //所以我们有时候，会将我们的密码加盐后再进行加密，传给服务器
+        //固定字符串的盐@"ABCDEF"
+        //随机字符串的盐
+        NSString* pass = [password.text md532BitUpper];
+        
+        NSDictionary* paraDic = @{
+                                  @"service":@"User.Register",
+                                  @"phone":phonetext.text,
+                                  @"password":pass,
+                                  @"verificationCode":test.text
+                                  };
+        
+        [NetWorkTool getDataWithParameters:paraDic completeBlock:^(BOOL success, id result) {
+            if (success) {
+                
+                [self.navigationController popViewControllerAnimated:YES];
+                
+                
+            }else{
+                [UIAlertView alertWithCallBackBlock:nil title:@"温馨提示" message:result cancelButtonName:@"确定" otherButtonTitles:nil, nil];
+            }
+        }];
+        
+    }];
+    
+    
+    
     
 }
+
+
+-(void)touchesBegan:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event{
+    [self.view endEditing:YES];
+}
+
+
+
 
 
 //我的需求:
@@ -256,6 +337,14 @@
 //4.也可以在代理方法里面处理，但是非常麻烦
 
 
+
+//需求:
+//1.点击发送验证码，按钮变为不可用，发送验证码
+//2.如果发送成功，按钮不可用，按钮上面显示60秒倒计时
+//3.如果失败，将按钮设置为可用，提示发送失败
+//4.当倒计时结束的时候，将按钮设置为可用（还要同时考虑到手机号码是否符合规则）
+
+//我们可以设置一个初始数字为60的变量，发送验证码的按钮可用与否再添加一个条件，当0-60的时候，按钮不可用，我们的定时器每走一次，将这个数字减去1，同时监控这个数字的变化，去改变我们的按钮倒计时提示
 
 
 

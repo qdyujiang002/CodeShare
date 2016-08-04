@@ -9,18 +9,18 @@
 #import "NetWorkTool.h"
 #import <AFNetworking.h>
 
-#ifdef DEBUG   //DEBUG 是程序自带的默认存在的一个宏定义，我们平时运行都是在这种方式下
-
-//平时我们开发时候，都会用一个单独的测试环境
-static NSString* baseUrl = @"http://10.30.152.134/PhalApi/Public/CodeShare/";
-//接口列表地址
-//http://10.30.152.134/PhalApi/Public/CodeShare/listAllApis.php
-
-#else
-
-static NSString* baseUrl = @"https://www.1000phone.tk";
-
-#endif
+//#ifdef DEBUG   //DEBUG 是程序自带的默认存在的一个宏定义，我们平时运行都是在这种方式下
+//
+////平时我们开发时候，都会用一个单独的测试环境
+//static NSString* baseUrl = @"http://10.30.152.134/PhalApi/Public/CodeShare/";
+////接口列表地址
+////http://10.30.152.134/PhalApi/Public/CodeShare/listAllApis.php
+//
+//#else
+//
+//static NSString* baseUrl = @"https://www.1000phone.tk";
+//
+//#endif
 
 @implementation NetWorkTool
 
@@ -29,7 +29,7 @@ static NSString* baseUrl = @"https://www.1000phone.tk";
     static AFHTTPSessionManager* manager = nil;
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
-        manager = [[AFHTTPSessionManager alloc]initWithBaseURL:[NSURL URLWithString:baseUrl]];
+        manager = [[AFHTTPSessionManager alloc]initWithBaseURL:[NSURL URLWithString:QFAppBaseURL]];
         //设置请求的超时时间
         //设置请求的参数编码方式
         manager.requestSerializer.timeoutInterval = 30;
